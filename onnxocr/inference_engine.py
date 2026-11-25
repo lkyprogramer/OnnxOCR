@@ -129,15 +129,80 @@ def _is_windows() -> bool:
     return platform.system() == "Windows"
 
 
+def _env_int(name: str) -> Optional[int]:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return None
+    parsed = int(value.strip())
+    if parsed < 0:
+        raise ValueError(f"{name} must be >= 0, got {parsed}")
+    return parsed
+
+
+def _env_bool(name: str) -> Optional[bool]:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return None
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean value, got {value!r}")
+
+
 def _default_session_options() -> SessionOptions:
     """Build a SessionOptions with graph optimization and memory pattern enabled.
 
     These settings provide 10-30% CPU inference speedup with no accuracy impact.
     """
+    log_severity = int(os.getenv("ONNXOCR_ORT_LOG_SEVERITY", "3"))
+    onnxruntime.set_default_logger_severity(log_severity)
     opts = SessionOptions()
     opts.graph_optimization_level = GraphOptimizationLevel.ORT_ENABLE_ALL
     opts.enable_mem_pattern = True
+    opts.log_severity_level = log_severity
+
+    intra_op = _env_int("ONNXOCR_ORT_INTRA_OP_THREADS")
+    if intra_op is not None and intra_op > 0:
+        opts.intra_op_num_threads = intra_op
+
+    inter_op = _env_int("ONNXOCR_ORT_INTER_OP_THREADS")
+    if inter_op is not None and inter_op > 0:
+        opts.inter_op_num_threads = inter_op
+
+    exec_mode = os.getenv("ONNXOCR_ORT_EXECUTION_MODE", "").strip().lower()
+    if exec_mode == "sequential" or (not exec_mode and inter_op == 1):
+        opts.execution_mode = onnxruntime.ExecutionMode.ORT_SEQUENTIAL
+    elif exec_mode == "parallel":
+        opts.execution_mode = onnxruntime.ExecutionMode.ORT_PARALLEL
+
+    allow_spinning = _env_bool("ONNXOCR_ORT_ALLOW_SPINNING")
+    if allow_spinning is not None:
+        flag = "1" if allow_spinning else "0"
+        opts.add_session_config_entry("session.intra_op.allow_spinning", flag)
+        opts.add_session_config_entry("session.inter_op.allow_spinning", flag)
+
     return opts
+
+
+class _CpuArenaShrinkSession(InferenceSession):
+    """Return unused CPU arena regions after inference while keeping session reuse."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._cpu_arena_run_options = None
+        if self.get_session_options().enable_cpu_mem_arena and EP.CPU.value in self.get_providers():
+            self._cpu_arena_run_options = onnxruntime.RunOptions()
+            self._cpu_arena_run_options.add_run_config_entry(
+                "memory.enable_memory_arena_shrinkage", "cpu:0"
+            )
+            log.info("CPU arena shrinkage enabled")
+
+    def run(self, output_names, input_feed, run_options=None):
+        if run_options is None:
+            run_options = self._cpu_arena_run_options
+        return super().run(output_names, input_feed, run_options)
 
 
 def create_session(
@@ -160,8 +225,9 @@ def create_session(
         providers=providers,
     )
     log.info("Creating ONNX session: {}, providers={}", model_path, session_providers)
+    session_cls = _CpuArenaShrinkSession if _env_bool("ONNXOCR_CPU_ARENA_SHRINK") else InferenceSession
     try:
-        return InferenceSession(
+        return session_cls(
             model_path,
             sess_options=sess_options,
             providers=session_providers,

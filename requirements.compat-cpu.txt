@@ -1,0 +1,15 @@
+flask
+gunicorn
+opencv-python-headless==4.11.0.86
+onnxruntime==1.20.1
+requests
+shapely
+pyclipper
+lmdb
+tqdm
+numpy<2.0.0
+pymupdf
+omegaconf
+loguru
+colorlog
+pillow

@@ -276,6 +276,12 @@ def infer_args():
     )
     parser.add_argument("--det_limit_side_len", type=float, default=736)
     parser.add_argument("--det_limit_type", type=str, default="min")
+    parser.add_argument("--det_max_side_len", type=float, default=None)
+    parser.add_argument("--det_max_pixels", type=float, default=None)
+    parser.add_argument("--det_tile_enable", type=str2bool, default=False)
+    parser.add_argument("--det_tile_height", type=int, default=1600)
+    parser.add_argument("--det_tile_overlap", type=int, default=160)
+    parser.add_argument("--det_tile_aspect_ratio", type=float, default=2.5)
     parser.add_argument("--det_box_type", type=str, default="quad")
 
     # DB parmas

@@ -39,8 +39,15 @@ def format_ocr_results(result) -> list:
 class ModelRegistry:
     """Lazy-initialized, cached model registry for API services."""
 
-    def __init__(self, use_gpu: bool = False):
+    def __init__(
+        self,
+        use_gpu: bool = False,
+        ocr_model_size: str = "small",
+        use_angle_cls: bool = True,
+    ):
         self._use_gpu = use_gpu
+        self._ocr_model_size = ocr_model_size
+        self._use_angle_cls = use_angle_cls
         self._ocr_model = None
         self._plate_model = None
         self._table_model = None
@@ -49,7 +56,11 @@ class ModelRegistry:
 
     def get_ocr_model(self) -> ONNXPaddleOcr:
         if self._ocr_model is None:
-            self._ocr_model = ONNXPaddleOcr(use_angle_cls=True, use_gpu=self._use_gpu)
+            self._ocr_model = ONNXPaddleOcr(
+                use_angle_cls=self._use_angle_cls,
+                use_gpu=self._use_gpu,
+                ocr_model_size=self._ocr_model_size,
+            )
         return self._ocr_model
 
     def get_plate_model(self) -> ONNXPaddleOcr:

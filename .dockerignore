@@ -26,5 +26,10 @@ dist
 onnxocr/models/*
 !onnxocr/models/ppocrv5
 !onnxocr/models/ppocrv5/**
+!onnxocr/models/ppocrv6
+onnxocr/models/ppocrv6/*
+!onnxocr/models/ppocrv6/small
+!onnxocr/models/ppocrv6/small/**
+!onnxocr/models/ppocrv6/ppocrv6_dict.txt
 !onnxocr/models/orientation
 !onnxocr/models/orientation/**

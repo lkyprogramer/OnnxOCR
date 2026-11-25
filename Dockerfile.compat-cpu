@@ -1,0 +1,37 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1 \
+    ONNXOCR_PORT=6013 \
+    ONNXOCR_USE_GPU=0 \
+    ONNXOCR_OCR_MODEL_SIZE=small \
+    ONNXOCR_USE_ANGLE_CLS=0 \
+    ONNXOCR_ORT_LOG_SEVERITY=3 \
+    ONNXOCR_ORT_INTRA_OP_THREADS=2 \
+    ONNXOCR_ORT_INTER_OP_THREADS=1 \
+    ONNXOCR_ORT_ALLOW_SPINNING=0 \
+    ONNXOCR_CV2_THREADS=1 \
+    ONNXOCR_DET_MAX_PIXELS=5000000 \
+    ONNXOCR_DET_TILE_ENABLE=0 \
+    ONNXOCR_DET_TILE_HEIGHT=1600 \
+    ONNXOCR_DET_TILE_OVERLAP=160 \
+    ONNXOCR_DET_TILE_ASPECT_RATIO=2.5 \
+    ONNXOCR_CPU_ARENA_SHRINK=1 \
+    OMP_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1
+
+ARG PIP_INDEX_URL=https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+COPY requirements.compat-cpu.txt .
+
+RUN pip install --no-cache-dir --index-url "${PIP_INDEX_URL}" \
+        -r requirements.compat-cpu.txt
+
+COPY . .
+
+EXPOSE 6013
+
+CMD ["gunicorn", "--workers=2", "--bind=0.0.0.0:6013", "flask_server:app"]

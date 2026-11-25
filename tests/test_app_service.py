@@ -62,3 +62,21 @@ def test_app_service_ocr_accepts_base64_image():
     assert payload["success"] is True
     assert payload["results"][0]["text"] == "hello"
     assert payload["results"][0]["confidence"] == 0.99
+
+
+def test_app_service_configures_gpu_small_model(monkeypatch):
+    captured = {}
+
+    class FakeRegistry:
+        def __init__(self, use_gpu=False, ocr_model_size="medium"):
+            captured["use_gpu"] = use_gpu
+            captured["ocr_model_size"] = ocr_model_size
+
+    module = load_app_service()
+    monkeypatch.setenv("ONNXOCR_USE_GPU", "1")
+    monkeypatch.setenv("ONNXOCR_OCR_MODEL_SIZE", "small")
+    monkeypatch.setattr(module, "ModelRegistry", FakeRegistry)
+
+    module.create_app()
+
+    assert captured == {"use_gpu": True, "ocr_model_size": "small"}

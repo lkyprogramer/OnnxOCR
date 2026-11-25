@@ -1,4 +1,5 @@
 import argparse
+import os
 import time
 from pathlib import Path
 
@@ -56,13 +57,43 @@ def _build_ppocrv6_defaults(kwargs):
     model_root = Path(__file__).resolve().parent / "models" / "ppocrv6"
     config = PPOCRV6_MODEL_CONFIGS[size]
 
+    det_limit_side_len_env = os.getenv("ONNXOCR_DET_LIMIT_SIDE_LEN", "").strip()
+    det_limit_type_env = os.getenv("ONNXOCR_DET_LIMIT_TYPE", "").strip()
+    det_max_side_len_env = os.getenv("ONNXOCR_DET_MAX_SIDE_LEN", "").strip()
+    det_max_pixels_env = os.getenv("ONNXOCR_DET_MAX_PIXELS", "").strip()
+    det_tile_enable_env = os.getenv("ONNXOCR_DET_TILE_ENABLE", "").strip().lower()
+    det_tile_height_env = os.getenv("ONNXOCR_DET_TILE_HEIGHT", "").strip()
+    det_tile_overlap_env = os.getenv("ONNXOCR_DET_TILE_OVERLAP", "").strip()
+    det_tile_aspect_env = os.getenv("ONNXOCR_DET_TILE_ASPECT_RATIO", "").strip()
+
+    det_limit_side_len = int(float(det_limit_side_len_env)) if det_limit_side_len_env else 736
+    det_limit_type = det_limit_type_env or "min"
+    det_max_side_len = None
+    if det_max_side_len_env:
+        parsed_max_side = float(det_max_side_len_env)
+        det_max_side_len = parsed_max_side if parsed_max_side > 0 else None
+    det_max_pixels = None
+    if det_max_pixels_env:
+        parsed_max_pixels = float(det_max_pixels_env)
+        det_max_pixels = parsed_max_pixels if parsed_max_pixels > 0 else None
+    det_tile_enable = det_tile_enable_env in {"1", "true", "yes", "y", "on"} if det_tile_enable_env else False
+    det_tile_height = int(det_tile_height_env) if det_tile_height_env else 1600
+    det_tile_overlap = int(det_tile_overlap_env) if det_tile_overlap_env else 160
+    det_tile_aspect_ratio = float(det_tile_aspect_env) if det_tile_aspect_env else 2.5
+
     defaults = {
         "det_model_dir": str(model_root / size / "det" / "det.onnx"),
         "rec_model_dir": str(model_root / size / "rec" / "rec.onnx"),
         "rec_char_dict_path": str(model_root / config["rec_char_dict_path"]),
         "rec_image_shape": "3, 48, 320",
-        "det_limit_side_len": 736,
-        "det_limit_type": "min",
+        "det_limit_side_len": det_limit_side_len,
+        "det_limit_type": det_limit_type,
+        "det_max_side_len": det_max_side_len,
+        "det_max_pixels": det_max_pixels,
+        "det_tile_enable": det_tile_enable,
+        "det_tile_height": det_tile_height,
+        "det_tile_overlap": det_tile_overlap,
+        "det_tile_aspect_ratio": det_tile_aspect_ratio,
         "det_db_thresh": 0.2,
         "det_db_box_thresh": config["det_db_box_thresh"],
         "det_db_unclip_ratio": 1.4,

@@ -31,7 +31,10 @@ def create_app(model_registry: ModelRegistry | None = None) -> Flask:
     app = Flask(__name__)
     app.config["MAX_CONTENT_LENGTH"] = int(os.getenv("ONNXOCR_MAX_UPLOAD_MB", "200")) * 1024 * 1024
     app.config["OUTPUT_DIR"] = os.getenv("ONNXOCR_OUTPUT_DIR", "result_img")
-    models = model_registry or ModelRegistry(use_gpu=_env_bool("ONNXOCR_USE_GPU", default=False))
+    models = model_registry or ModelRegistry(
+        use_gpu=_env_bool("ONNXOCR_USE_GPU", default=False),
+        ocr_model_size=os.getenv("ONNXOCR_OCR_MODEL_SIZE", "small"),
+    )
 
     @app.get("/")
     def index():

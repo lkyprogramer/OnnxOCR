@@ -42,6 +42,8 @@ class DetResizeForTest(object):
     def __init__(self, **kwargs):
         self.resize_type = 0
         self.keep_ratio = False
+        self.max_side_len = kwargs.get('max_side_len', None)
+        self.max_pixels = kwargs.get('max_pixels', None)
         if 'image_shape' in kwargs:
             self.image_shape = kwargs['image_shape']
             self.resize_type = 1
@@ -126,6 +128,15 @@ class DetResizeForTest(object):
             ratio = float(limit_side_len) / max(h, w)
         else:
             raise Exception('not support limit type, image ')
+
+        if self.max_side_len is not None and self.max_side_len > 0:
+            if max(h * ratio, w * ratio) > self.max_side_len:
+                ratio = float(self.max_side_len) / max(h, w)
+
+        if self.max_pixels is not None and self.max_pixels > 0:
+            if (h * ratio) * (w * ratio) > self.max_pixels:
+                ratio = math.sqrt(float(self.max_pixels) / float(h * w))
+
         resize_h = int(h * ratio)
         resize_w = int(w * ratio)
 
